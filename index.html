@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>公務車借用點交系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0A1628;
+    --navy-mid: #152238;
+    --navy-light: #1E3352;
+    --steel: #2A4A6B;
+    --accent: #00B4D8;
+    --accent-dim: #0096B4;
+    --accent-glow: rgba(0,180,216,0.15);
+    --gold: #F4B942;
+    --success: #22C55E;
+    --danger: #EF4444;
+    --warning: #F59E0B;
+    --text: #E8EDF5;
+    --text-dim: #8FA3BF;
+    --text-muted: #4A6480;
+    --border: rgba(0,180,216,0.2);
+    --border-bright: rgba(0,180,216,0.5);
+    --card: rgba(21,34,56,0.95);
+    --input-bg: rgba(10,22,40,0.8);
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(0,180,216,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(244,185,66,0.04) 0%, transparent 50%);
+  }
+
+  /* ---- LAYOUT ---- */
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+  @media(min-width:900px){ .app { max-width: 600px; } }
+
+  /* ---- HEADER ---- */
+  .header {
+    background: var(--navy-mid);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  .header-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 15px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .header-logo .icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .header-user {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-dim);
+  }
+  .btn-logout {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 12px;
+    padding: 4px 10px; border-radius: 6px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ---- NAV TABS ---- */
+  .nav-tabs {
+    display: flex;
+    background: var(--navy-mid);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    flex: 1; min-width: 80px;
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .nav-tab:hover { color: var(--text-dim); }
+
+  /* ---- PAGES ---- */
+  .page { display: none; padding: 20px 16px; }
+  .page.active { display: block; }
+
+  /* ---- LOGIN PAGE ---- */
+  .login-wrap {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px 24px;
+  }
+  .login-brand {
+    text-align: center; margin-bottom: 40px;
+  }
+  .login-brand .brand-icon {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, var(--accent) 0%, #0077A8 100%);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; margin: 0 auto 16px;
+    box-shadow: 0 0 40px rgba(0,180,216,0.3);
+  }
+  .login-brand h1 {
+    font-size: 20px; font-weight: 700; letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .login-brand p { font-size: 13px; color: var(--text-dim); }
+  .login-card {
+    width: 100%; max-width: 360px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 24px;
+    box-shadow: var(--shadow);
+  }
+
+  /* ---- FORM ELEMENTS ---- */
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block; font-size: 12px; color: var(--text-dim);
+    margin-bottom: 6px; letter-spacing: 0.5px;
+    font-weight: 500;
+  }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2300B4D8' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  .field select option { background: var(--navy-mid); }
+  .field textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+  /* ---- BUTTONS ---- */
+  .btn {
+    display: block; width: 100%;
+    padding: 14px;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    font-family: inherit; letter-spacing: 0.3px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    color: white;
+    box-shadow: 0 4px 16px rgba(0,180,216,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,180,216,0.4); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: var(--navy-light); color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-success { background: var(--success); color: white; }
+  .btn-sm {
+    display: inline-block; width: auto;
+    padding: 7px 14px; font-size: 13px;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+  /* ---- CARD ---- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--accent); letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::before {
+    content: ''; display: block;
+    width: 3px; height: 14px;
+    background: var(--accent); border-radius: 2px;
+  }
+
+  /* ---- ALERT ---- */
+  .alert {
+    padding: 12px 16px; border-radius: var(--radius-sm);
+    font-size: 13px; margin-bottom: 16px;
+    display: none;
+  }
+  .alert.show { display: block; }
+  .alert-error { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color: #FCA5A5; }
+  .alert-success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); color: #86EFAC; }
+  .alert-info { background: rgba(0,180,216,0.12); border: 1px solid var(--border-bright); color: var(--accent); }
+
+  /* ---- INFO ROW ---- */
+  .info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-label { color: var(--text-dim); font-size: 13px; }
+  .info-value { font-weight: 500; color: var(--text); }
+  .info-value.mono { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--accent); }
+
+  /* ---- CHECKBOX ITEMS ---- */
+  .check-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-item input[type="checkbox"] {
+    width: 22px; height: 22px; min-width: 22px;
+    accent-color: var(--accent);
+    cursor: pointer; margin-top: 1px;
+  }
+  .check-item label {
+    font-size: 15px; cursor: pointer; flex: 1;
+    color: var(--text);
+  }
+  .check-note {
+    margin-top: 8px;
+    margin-left: 34px;
+  }
+
+  /* ---- PHOTO UPLOAD ---- */
+  .photo-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .photo-area:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .photo-area input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .photo-area-text { color: var(--text-dim); font-size: 14px; }
+  .photo-area-icon { font-size: 32px; margin-bottom: 8px; }
+  .photo-preview {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 12px;
+  }
+  .photo-thumb {
+    width: 80px; height: 80px;
+    border-radius: 8px; overflow: hidden;
+    border: 2px solid var(--border);
+    position: relative;
+  }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-thumb .remove-photo {
+    position: absolute; top: 2px; right: 2px;
+    width: 20px; height: 20px;
+    background: var(--danger); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; cursor: pointer; color: white; font-weight: bold;
+  }
+
+  /* ---- SIGNATURE ---- */
+  .sig-wrap {
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+  }
+  #signatureCanvas {
+    display: block; width: 100%;
+    background: rgba(255,255,255,0.03);
+    cursor: crosshair;
+    touch-action: none;
+  }
+  .sig-hint {
+    text-align: center; font-size: 12px; color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .sig-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+  /* ---- ADMIN TABLE ---- */
+  .data-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+  }
+  .data-table th {
+    text-align: left; padding: 10px 8px;
+    border-bottom: 1px solid var(--border-bright);
+    color: var(--accent); font-weight: 600;
+    font-size: 12px; letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    color: var(--text-dim);
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--accent-glow); color: var(--text); }
+  .table-scroll { overflow-x: auto; }
+
+  /* ---- BADGE ---- */
+  .badge {
+    display: inline-block;
+    padding: 3px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  }
+  .badge-admin { background: rgba(244,185,66,0.2); color: var(--gold); }
+  .badge-user { background: rgba(0,180,216,0.15); color: var(--accent); }
+
+  /* ---- MODAL ---- */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    z-index: 200; display: none;
+    align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--navy-mid);
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%; max-width: 420px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-title {
+    font-size: 16px; font-weight: 700;
+    margin-bottom: 20px; color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .modal-title .accent { color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .modal-actions .btn { flex: 1; }
+
+  /* ---- SUCCESS PAGE ---- */
+  .success-page {
+    display: none;
+    position: fixed; inset: 0; z-index: 300;
+    background: var(--navy);
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 32px;
+  }
+  .success-page.show { display: flex; }
+  .success-icon {
+    width: 80px; height: 80px;
+    background: rgba(34,197,94,0.15);
+    border: 3px solid var(--success);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; margin-bottom: 24px;
+    animation: pop 0.4s ease;
+  }
+  @keyframes pop { 0%{transform:scale(0.5);opacity:0} 80%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+  .success-page h2 { font-size: 24px; margin-bottom: 12px; }
+  .success-page p { color: var(--text-dim); font-size: 14px; text-align: center; margin-bottom: 8px; }
+  .success-record { font-family:'IBM Plex Mono',monospace; color:var(--accent); font-size:13px; margin:16px 0; }
+
+  /* ---- LOADING ---- */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    display: inline-block; vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- SECTION DIVIDER ---- */
+  .divider {
+    height: 1px; background: var(--border);
+    margin: 20px 0;
+  }
+
+  /* ---- TIME DISPLAY ---- */
+  .time-display {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 20px; color: var(--accent);
+    text-align: center; padding: 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    letter-spacing: 1px;
+  }
+
+  /* ---- VEHICLE CARD ---- */
+  .vehicle-selected {
+    background: var(--accent-glow);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 13px; color: var(--text-dim);
+    margin-top: 8px;
+  }
+  .vehicle-selected strong { color: var(--text); font-size: 15px; display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ==================== LOGIN PAGE ==================== -->
+<div id="loginPage" class="login-wrap">
+  <div class="login-brand">
+    <div class="brand-icon">🚗</div>
+    <h1>公務車借用點交系統</h1>
+    <p>Government Vehicle Handover System</p>
+  </div>
+  <div class="login-card">
+    <div class="alert alert-error" id="loginAlert"></div>
+    <div class="field">
+      <label>員工代號</label>
+      <input type="text" id="loginId" placeholder="請輸入員工代號" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>密碼</label>
+      <input type="password" id="loginPwd" placeholder="請輸入密碼" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" id="loginBtn" onclick="doLogin()">登入系統</button>
+  </div>
+</div>
+
+<!-- ==================== CHANGE PASSWORD PAGE ==================== -->
+<div id="changePwdPage" style="display:none" class="login-wrap">
+  <div class="login-brand">
+    <div class="brand-icon">🔐</div>
+    <h1>首次登入</h1>
+    <p>請設定您的新密碼</p>
+  </div>
+  <div class="login-card">
+    <div class="alert alert-info show" style="margin-bottom:18px">
+      首次登入必須更改密碼，新密碼不可與員工代號相同。
+    </div>
+    <div class="alert alert-error" id="changePwdAlert"></div>
+    <div class="field">
+      <label>新密碼</label>
+      <input type="password" id="newPwd1" placeholder="請輸入新密碼（至少6位）">
+    </div>
+    <div class="field">
+      <label>確認新密碼</label>
+      <input type="password" id="newPwd2" placeholder="請再次輸入新密碼">
+    </div>
+    <button class="btn btn-primary" onclick="doChangePassword()">確認更改密碼</button>
+  </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div id="mainApp" style="display:none">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">
+      <div class="icon">🚗</div>
+      <span>點交系統</span>
+    </div>
+    <div class="header-user">
+      <span id="headerUserName"></span>
+      <button class="btn-logout" onclick="doLogout()">登出</button>
+    </div>
+  </div>
+
+  <!-- Nav Tabs -->
+  <div class="nav-tabs" id="navTabs">
+    <div class="nav-tab active" data-page="handoverPage" onclick="switchPage('handoverPage')">📋 點交</div>
+    <div class="nav-tab" data-page="profilePage" onclick="switchPage('profilePage')">👤 個人</div>
+    <div class="nav-tab" data-page="adminPage" id="adminTab" style="display:none" onclick="switchPage('adminPage')">⚙️ 管理</div>
+  </div>
+
+  <!-- ===== HANDOVER PAGE ===== -->
+  <div class="page active" id="handoverPage">
+    <div class="alert alert-error" id="handoverAlert"></div>
+
+    <!-- 交接人 & 時間 -->
+    <div class="card">
+      <div class="card-title">交接資訊</div>
+      <div class="info-row">
+        <span class="info-label">交接人</span>
+        <span class="info-value" id="fromUserDisplay"></span>
+      </div>
+      <div class="info-row" style="border-bottom:none; padding-bottom:0">
+        <span class="info-label">交接時間</span>
+        <span></span>
+      </div>
+      <div class="time-display" id="currentTimeDisplay"></div>
+    </div>
+
+    <!-- 車輛選擇 -->
+    <div class="card">
+      <div class="card-title">借用車輛</div>
+      <div class="field" style="margin-bottom:0">
+        <label>選擇車輛</label>
+        <select id="vehicleSelect" onchange="onVehicleChange()">
+          <option value="">-- 請選擇車輛 --</option>
+        </select>
+        <div class="vehicle-selected" id="vehicleInfo" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- 被交接者 -->
+    <div class="card">
+      <div class="card-title">被交接人</div>
+      <div class="field" style="margin-bottom:0">
+        <label>選擇被交接人</label>
+        <select id="toUserSelect">
+          <option value="">-- 請選擇被交接人 --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 點交項目 -->
+    <div class="card">
+      <div class="card-title">點交項目</div>
+      <div class="check-item">
+        <input type="checkbox" id="checkKey" checked>
+        <label for="checkKey">🔑 鑰匙</label>
+      </div>
+      <div class="check-item">
+        <input type="checkbox" id="checkLicense" checked>
+        <label for="checkLicense">📄 行照</label>
+      </div>
+      <div class="check-item">
+        <input type="checkbox" id="checkExterior" checked>
+        <label for="checkExterior">🚘 車輛外觀</label>
+      </div>
+      <div class="check-item">
+        <input type="checkbox" id="checkInterior" checked>
+        <label for="checkInterior">✨ 車內清潔</label>
+      </div>
+      <div class="check-item">
+        <input type="checkbox" id="checkOther">
+        <label for="checkOther">📝 其他</label>
+      </div>
+      <div class="check-note" id="otherNoteWrap" style="display:none">
+        <div class="field" style="margin-bottom:0">
+          <textarea id="otherNote" placeholder="請填寫其他說明..." rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 佐證圖片 -->
+    <div class="card">
+      <div class="card-title">佐證圖片</div>
+      <div class="photo-area" id="photoArea">
+        <input type="file" id="photoInput" accept="image/*" multiple capture="environment" onchange="onPhotoSelected(event)">
+        <div class="photo-area-icon">📷</div>
+        <div class="photo-area-text">點擊拍照或選擇圖片<br><small style="color:var(--text-muted)">可多張上傳</small></div>
+      </div>
+      <div class="photo-preview" id="photoPreview"></div>
+    </div>
+
+    <!-- 簽名區 -->
+    <div class="card">
+      <div class="card-title">被交接人簽名</div>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px">請被交接人在下方簽名確認</p>
+      <div class="sig-wrap">
+        <canvas id="signatureCanvas" height="160"></canvas>
+      </div>
+      <p class="sig-hint">請在上方白框內簽名</p>
+      <div class="sig-actions">
+        <button class="btn btn-secondary btn-sm" onclick="clearSignature()">清除重寫</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="submitBtn" onclick="submitHandover()" style="margin-top:8px;margin-bottom:32px">
+      確認完成點交
+    </button>
+  </div>
+
+  <!-- ===== PROFILE PAGE ===== -->
+  <div class="page" id="profilePage">
+    <div class="card">
+      <div class="card-title">個人資料</div>
+      <div class="alert alert-success" id="profileAlert"></div>
+      <div class="field">
+        <label>員工代號</label>
+        <input type="text" id="profileId" disabled style="opacity:0.5">
+      </div>
+      <div class="field">
+        <label>中文姓名</label>
+        <input type="text" id="profileNameCn" placeholder="中文姓名">
+      </div>
+      <div class="field">
+        <label>英文姓名</label>
+        <input type="text" id="profileNameEn" placeholder="English Name">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="profileEmail" placeholder="email@company.com">
+      </div>
+      <button class="btn btn-primary" onclick="saveProfile()">儲存個人資料</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">更改密碼</div>
+      <div class="alert alert-error" id="profilePwdAlert"></div>
+      <div class="field">
+        <label>新密碼</label>
+        <input type="password" id="profileNewPwd1" placeholder="請輸入新密碼（至少6位）">
+      </div>
+      <div class="field">
+        <label>確認新密碼</label>
+        <input type="password" id="profileNewPwd2" placeholder="請再次輸入新密碼">
+      </div>
+      <button class="btn btn-secondary" onclick="saveProfilePassword()">更改密碼</button>
+    </div>
+  </div>
+
+  <!-- ===== ADMIN PAGE ===== -->
+  <div class="page" id="adminPage">
+    <!-- Nav sub-tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;overflow-x:auto">
+      <button class="btn btn-primary btn-sm" onclick="showAdminTab('adminUsers')">人員管理</button>
+      <button class="btn btn-secondary btn-sm" onclick="showAdminTab('adminVehicles')">車輛管理</button>
+    </div>
+
+    <!-- Users -->
+    <div id="adminUsers">
+      <div class="card">
+        <div class="card-title">人員資料庫</div>
+        <button class="btn btn-primary btn-sm" onclick="openUserModal(null)" style="margin-bottom:14px">+ 新增人員</button>
+        <button class="btn btn-secondary btn-sm" onclick="adminResetAll()" style="margin-bottom:14px">重設所有密碼</button>
+        <div class="table-scroll">
+          <table class="data-table" id="usersTable">
+            <thead><tr>
+              <th>代號</th><th>中文姓名</th><th>Email</th><th>角色</th><th>操作</th>
+            </tr></thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vehicles -->
+    <div id="adminVehicles" style="display:none">
+      <div class="card">
+        <div class="card-title">車輛資料庫</div>
+        <button class="btn btn-primary btn-sm" onclick="openVehicleModal(null)" style="margin-bottom:14px">+ 新增車輛</button>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr>
+              <th>車號</th><th>品牌</th><th>車款</th><th>地點</th><th>操作</th>
+            </tr></thead>
+            <tbody id="vehiclesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end mainApp -->
+
+<!-- ==================== SUCCESS PAGE ==================== -->
+<div class="success-page" id="successPage">
+  <div class="success-icon">✓</div>
+  <h2>點交完成！</h2>
+  <div class="success-record" id="successRecordId"></div>
+  <p>點交記錄已儲存</p>
+  <p id="successEmailNote">確認Email已發送給雙方</p>
+  <button class="btn btn-primary" style="max-width:280px;margin-top:24px" onclick="resetHandover()">返回進行下一筆</button>
+</div>
+
+<!-- ==================== MODALS ==================== -->
+<!-- User Modal -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <div class="modal-title"><span class="accent">◆</span> <span id="userModalTitle">新增人員</span></div>
+    <input type="hidden" id="userRowIndex">
+    <div class="field"><label>員工代號</label><input type="text" id="mUserId" placeholder="EMP001"></div>
+    <div class="field"><label>中文姓名</label><input type="text" id="mUserNameCn" placeholder="王小明"></div>
+    <div class="field"><label>英文姓名</label><input type="text" id="mUserNameEn" placeholder="Wang Xiaoming"></div>
+    <div class="field"><label>Email</label><input type="email" id="mUserEmail" placeholder="user@company.com"></div>
+    <div class="field">
+      <label>角色</label>
+      <select id="mUserRole">
+        <option value="user">一般員工</option>
+        <option value="admin">管理員</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('userModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveUser()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vehicle Modal -->
+<div class="modal-overlay" id="vehicleModal">
+  <div class="modal">
+    <div class="modal-title"><span class="accent">◆</span> <span id="vehicleModalTitle">新增車輛</span></div>
+    <input type="hidden" id="vehicleRowIndex">
+    <div class="field"><label>車號</label><input type="text" id="mVehiclePlate" placeholder="ABC-1234"></div>
+    <div class="field"><label>品牌</label><input type="text" id="mVehicleBrand" placeholder="Toyota"></div>
+    <div class="field"><label>車款</label><input type="text" id="mVehicleModel" placeholder="Camry"></div>
+    <div class="field"><label>停放地點</label><input type="text" id="mVehicleLocation" placeholder="B1 停車場 A區"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('vehicleModal')">取消</button>
+      <button class="btn btn-primary" onclick="saveVehicle()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+// ============================================================
+// CONFIG - 請替換為您的 Google Apps Script 網址
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbz96EZT0nE2puP3qnd4WxsLj1aotSPHAGSRJSKRkXe_MPxNT5CkOSduo0l299FQ4QnXog/exec';
+
+// ============================================================
+// STATE
+// ============================================================
+let currentUser = null;
+let authToken = null;
+let allUsers = [];
+let allVehicles = [];
+let photoFiles = [];
+let signaturePad = null;
+let isDrawing = false;
+
+// ============================================================
+// API CALL
+// ============================================================
+async function api(action, data = {}) {
+  const body = { action, token: authToken, ...data };
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+  return res.json();
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+async function doLogin() {
+  const id = document.getElementById('loginId').value.trim();
+  const pwd = document.getElementById('loginPwd').value;
+  const btn = document.getElementById('loginBtn');
+  const alert = document.getElementById('loginAlert');
+
+  if (!id || !pwd) { showAlert(alert, '請輸入員工代號及密碼'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>登入中...';
+  hideAlert(alert);
+
+  try {
+    const res = await api('login', { employeeId: id, password: pwd });
+    if (res.success) {
+      authToken = res.token;
+      currentUser = res.user;
+      if (res.user.firstLogin) {
+        showChangePwdPage();
+      } else {
+        showMainApp();
+      }
+    } else {
+      showAlert(alert, res.message || '登入失敗');
+    }
+  } catch(e) {
+    showAlert(alert, '連線錯誤，請稍後再試');
+  }
+  btn.disabled = false;
+  btn.textContent = '登入系統';
+}
+
+function showChangePwdPage() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('changePwdPage').style.display = 'flex';
+}
+
+async function doChangePassword() {
+  const p1 = document.getElementById('newPwd1').value;
+  const p2 = document.getElementById('newPwd2').value;
+  const alert = document.getElementById('changePwdAlert');
+  hideAlert(alert);
+
+  if (!p1 || p1.length < 6) { showAlert(alert, '密碼至少6個字元'); return; }
+  if (p1 !== p2) { showAlert(alert, '兩次密碼不一致'); return; }
+  if (p1 === currentUser.employeeId) { showAlert(alert, '新密碼不可與員工代號相同'); return; }
+
+  const res = await api('changePassword', { employeeId: currentUser.employeeId, newPassword: p1 });
+  if (res.success) {
+    currentUser.firstLogin = false;
+    document.getElementById('changePwdPage').style.display = 'none';
+    showMainApp();
+  } else {
+    showAlert(alert, res.message);
+  }
+}
+
+function doLogout() {
+  authToken = null; currentUser = null;
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('loginId').value = '';
+  document.getElementById('loginPwd').value = '';
+}
+
+// ============================================================
+// MAIN APP INIT
+// ============================================================
+async function showMainApp() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('changePwdPage').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+
+  document.getElementById('headerUserName').textContent = currentUser.nameCn;
+  document.getElementById('fromUserDisplay').textContent =
+    currentUser.nameCn + ' (' + currentUser.employeeId + ')';
+
+  if (currentUser.role === 'admin') {
+    document.getElementById('adminTab').style.display = 'block';
+  }
+
+  // Load data
+  const [vRes, uRes] = await Promise.all([
+    api('getVehicles'),
+    api('getUsers')
+  ]);
+  allVehicles = vRes.vehicles || [];
+  allUsers = uRes.users || [];
+
+  populateVehicleSelect();
+  populateUserSelect();
+  startClock();
+  initSignaturePad();
+  fillProfile();
+
+  // Load admin data if admin
+  if (currentUser.role === 'admin') loadAdminData();
+
+  // Checkbox other toggle
+  document.getElementById('checkOther').addEventListener('change', function() {
+    document.getElementById('otherNoteWrap').style.display = this.checked ? 'block' : 'none';
+  });
+}
+
+function fillProfile() {
+  document.getElementById('profileId').value = currentUser.employeeId;
+  document.getElementById('profileNameCn').value = currentUser.nameCn;
+  document.getElementById('profileNameEn').value = currentUser.nameEn;
+  document.getElementById('profileEmail').value = currentUser.email;
+}
+
+// ============================================================
+// CLOCK
+// ============================================================
+let clockInterval;
+function startClock() {
+  const el = document.getElementById('currentTimeDisplay');
+  const update = () => {
+    const now = new Date();
+    el.textContent = now.toLocaleDateString('zh-TW') + ' ' +
+      now.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  };
+  update();
+  clearInterval(clockInterval);
+  clockInterval = setInterval(update, 1000);
+}
+
+// ============================================================
+// SELECTS
+// ============================================================
+function populateVehicleSelect() {
+  const sel = document.getElementById('vehicleSelect');
+  sel.innerHTML = '<option value="">-- 請選擇車輛 --</option>';
+  allVehicles.forEach(v => {
+    sel.innerHTML += `<option value="${v.plateNo}">${v.plateNo} - ${v.brand} ${v.model}</option>`;
+  });
+}
+
+function populateUserSelect() {
+  const sel = document.getElementById('toUserSelect');
+  sel.innerHTML = '<option value="">-- 請選擇被交接人 --</option>';
+  allUsers.filter(u => u.employeeId !== currentUser.employeeId).forEach(u => {
+    sel.innerHTML += `<option value="${u.employeeId}">${u.nameCn} (${u.employeeId})</option>`;
+  });
+}
+
+function onVehicleChange() {
+  const plate = document.getElementById('vehicleSelect').value;
+  const info = document.getElementById('vehicleInfo');
+  if (plate) {
+    const v = allVehicles.find(x => x.plateNo === plate);
+    if (v) {
+      info.style.display = 'block';
+      info.innerHTML = `<strong>${v.brand} ${v.model}</strong>停放地點：${v.location}`;
+    }
+  } else {
+    info.style.display = 'none';
+  }
+}
+
+// ============================================================
+// PHOTO UPLOAD
+// ============================================================
+function onPhotoSelected(e) {
+  const files = Array.from(e.target.files);
+  files.forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    photoFiles.push(file);
+    const reader = new FileReader();
+    reader.onload = ev => addPhotoThumb(ev.target.result, photoFiles.length - 1);
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+
+function addPhotoThumb(dataUrl, idx) {
+  const preview = document.getElementById('photoPreview');
+  const div = document.createElement('div');
+  div.className = 'photo-thumb';
+  div.dataset.idx = idx;
+  div.innerHTML = `<img src="${dataUrl}"><div class="remove-photo" onclick="removePhoto(${idx})">×</div>`;
+  preview.appendChild(div);
+}
+
+function removePhoto(idx) {
+  photoFiles[idx] = null;
+  const thumb = document.querySelector(`.photo-thumb[data-idx="${idx}"]`);
+  if (thumb) thumb.remove();
+}
+
+// ============================================================
+// SIGNATURE PAD
+// ============================================================
+function initSignaturePad() {
+  const canvas = document.getElementById('signatureCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth;
+
+  let drawing = false;
+  let lastX = 0, lastY = 0;
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    if (e.touches) {
+      return [(e.touches[0].clientX - rect.left) * scaleX,
+              (e.touches[0].clientY - rect.top) * scaleY];
+    }
+    return [(e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY];
+  }
+
+  canvas.addEventListener('mousedown', e => { drawing = true; [lastX, lastY] = getPos(e); });
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; [lastX, lastY] = getPos(e); }, {passive:false});
+
+  function draw(e) {
+    if (!drawing) return;
+    if (e.touches) e.preventDefault();
+    const [x, y] = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = '#00B4D8';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    [lastX, lastY] = [x, y];
+  }
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('touchmove', draw, {passive:false});
+  canvas.addEventListener('mouseup', () => drawing = false);
+  canvas.addEventListener('touchend', () => drawing = false);
+
+  signaturePad = { canvas, ctx, isEmpty: () => {
+    const d = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    return !d.some(v => v !== 0);
+  }};
+}
+
+function clearSignature() {
+  const c = document.getElementById('signatureCanvas');
+  c.getContext('2d').clearRect(0, 0, c.width, c.height);
+}
+
+// ============================================================
+// SUBMIT HANDOVER
+// ============================================================
+async function submitHandover() {
+  const alert = document.getElementById('handoverAlert');
+  hideAlert(alert);
+
+  const vehicle = document.getElementById('vehicleSelect').value;
+  const toId = document.getElementById('toUserSelect').value;
+
+  if (!vehicle) { showAlert(alert, '請選擇借用車輛'); scrollToTop(); return; }
+  if (!toId) { showAlert(alert, '請選擇被交接人'); scrollToTop(); return; }
+  if (signaturePad && signaturePad.isEmpty()) { showAlert(alert, '請被交接人完成簽名'); scrollToTop(); return; }
+
+  const toUser = allUsers.find(u => u.employeeId === toId);
+  const veh = allVehicles.find(v => v.plateNo === vehicle);
+
+  // Collect photos as base64
+  const photos = [];
+  for (const f of photoFiles) {
+    if (!f) continue;
+    const b64 = await fileToBase64(f);
+    photos.push(b64);
+  }
+
+  const signature = document.getElementById('signatureCanvas').toDataURL('image/png');
+  const now = new Date();
+
+  const handover = {
+    fromId: currentUser.employeeId,
+    fromName: currentUser.nameCn,
+    fromEmail: currentUser.email,
+    toId,
+    toName: toUser ? toUser.nameCn : toId,
+    toEmail: toUser ? toUser.email : '',
+    vehiclePlate: vehicle,
+    vehicleInfo: veh ? veh.brand + ' ' + veh.model : '',
+    handoverTime: now.toLocaleString('zh-TW'),
+    checkKey: document.getElementById('checkKey').checked,
+    checkLicense: document.getElementById('checkLicense').checked,
+    checkExterior: document.getElementById('checkExterior').checked,
+    checkInterior: document.getElementById('checkInterior').checked,
+    otherNote: document.getElementById('checkOther').checked ? document.getElementById('otherNote').value : '',
+    photos,
+    signature
+  };
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>提交中...';
+
+  try {
+    const res = await api('submitHandover', { handover });
+    if (res.success) {
+      document.getElementById('successRecordId').textContent = '記錄編號：' + res.recordId;
+      document.getElementById('successPage').classList.add('show');
+    } else {
+      showAlert(alert, res.message || '提交失敗');
+      scrollToTop();
+    }
+  } catch(e) {
+    showAlert(alert, '連線錯誤，請稍後再試');
+    scrollToTop();
+  }
+  btn.disabled = false;
+  btn.textContent = '確認完成點交';
+}
+
+function resetHandover() {
+  document.getElementById('successPage').classList.remove('show');
+  document.getElementById('vehicleSelect').value = '';
+  document.getElementById('vehicleInfo').style.display = 'none';
+  document.getElementById('toUserSelect').value = '';
+  document.getElementById('checkKey').checked = true;
+  document.getElementById('checkLicense').checked = true;
+  document.getElementById('checkExterior').checked = true;
+  document.getElementById('checkInterior').checked = true;
+  document.getElementById('checkOther').checked = false;
+  document.getElementById('otherNoteWrap').style.display = 'none';
+  document.getElementById('otherNote').value = '';
+  document.getElementById('photoPreview').innerHTML = '';
+  photoFiles = [];
+  clearSignature();
+  hideAlert(document.getElementById('handoverAlert'));
+  switchPage('handoverPage');
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// ============================================================
+// PROFILE
+// ============================================================
+async function saveProfile() {
+  const nameCn = document.getElementById('profileNameCn').value.trim();
+  const nameEn = document.getElementById('profileNameEn').value.trim();
+  const email = document.getElementById('profileEmail').value.trim();
+  const alert = document.getElementById('profileAlert');
+
+  const res = await api('updateMyProfile', {
+    employeeId: currentUser.employeeId, nameCn, nameEn, email
+  });
+  if (res.success) {
+    currentUser.nameCn = nameCn; currentUser.nameEn = nameEn; currentUser.email = email;
+    document.getElementById('fromUserDisplay').textContent = nameCn + ' (' + currentUser.employeeId + ')';
+    document.getElementById('headerUserName').textContent = nameCn;
+    alert.className = 'alert alert-success show';
+    alert.textContent = '個人資料已更新';
+    setTimeout(() => hideAlert(alert), 3000);
+  }
+}
+
+async function saveProfilePassword() {
+  const p1 = document.getElementById('profileNewPwd1').value;
+  const p2 = document.getElementById('profileNewPwd2').value;
+  const alert = document.getElementById('profilePwdAlert');
+  hideAlert(alert);
+
+  if (!p1 || p1.length < 6) { showAlert(alert, '密碼至少6個字元'); return; }
+  if (p1 !== p2) { showAlert(alert, '兩次密碼不一致'); return; }
+  if (p1 === currentUser.employeeId) { showAlert(alert, '新密碼不可與員工代號相同'); return; }
+
+  const res = await api('changePassword', { employeeId: currentUser.employeeId, newPassword: p1 });
+  if (res.success) {
+    alert.className = 'alert alert-success show';
+    alert.textContent = '密碼更改成功';
+    document.getElementById('profileNewPwd1').value = '';
+    document.getElementById('profileNewPwd2').value = '';
+    setTimeout(() => hideAlert(alert), 3000);
+  } else {
+    showAlert(alert, res.message);
+  }
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+async function loadAdminData() {
+  const [uRes, vRes] = await Promise.all([
+    api('adminGetAllUsers'),
+    api('adminGetAllVehicles')
+  ]);
+  renderUsersTable(uRes.users || []);
+  renderVehiclesTable(vRes.vehicles || []);
+}
+
+function renderUsersTable(users) {
+  const body = document.getElementById('usersTableBody');
+  body.innerHTML = users.map(u => `
+    <tr>
+      <td><code style="color:var(--accent);font-size:12px">${u.employeeId}</code></td>
+      <td>${u.nameCn}</td>
+      <td style="font-size:12px">${u.email}</td>
+      <td><span class="badge badge-${u.role}">${u.role==='admin'?'管理員':'員工'}</span></td>
+      <td>
+        <button class="btn btn-secondary btn-sm" style="padding:4px 8px;font-size:11px" onclick='openUserModal(${JSON.stringify(u)})'>編輯</button>
+        <button class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#FCA5A5;padding:4px 8px;font-size:11px;margin-left:4px" onclick="deleteUser(${u.rowIndex},'${u.nameCn}')">刪除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderVehiclesTable(vehicles) {
+  const body = document.getElementById('vehiclesTableBody');
+  body.innerHTML = vehicles.map(v => `
+    <tr>
+      <td><code style="color:var(--accent)">${v.plateNo}</code></td>
+      <td>${v.brand}</td>
+      <td>${v.model}</td>
+      <td style="font-size:12px">${v.location}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" style="padding:4px 8px;font-size:11px" onclick='openVehicleModal(${JSON.stringify(v)})'>編輯</button>
+        <button class="btn btn-sm" style="background:rgba(239,68,68,0.2);color:#FCA5A5;padding:4px 8px;font-size:11px;margin-left:4px" onclick="deleteVehicle(${v.rowIndex},'${v.plateNo}')">刪除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function showAdminTab(tab) {
+  document.getElementById('adminUsers').style.display = tab === 'adminUsers' ? 'block' : 'none';
+  document.getElementById('adminVehicles').style.display = tab === 'adminVehicles' ? 'block' : 'none';
+}
+
+function openUserModal(user) {
+  document.getElementById('userModalTitle').textContent = user ? '編輯人員' : '新增人員';
+  document.getElementById('userRowIndex').value = user ? user.rowIndex : '';
+  document.getElementById('mUserId').value = user ? user.employeeId : '';
+  document.getElementById('mUserId').disabled = !!user;
+  document.getElementById('mUserNameCn').value = user ? user.nameCn : '';
+  document.getElementById('mUserNameEn').value = user ? user.nameEn : '';
+  document.getElementById('mUserEmail').value = user ? user.email : '';
+  document.getElementById('mUserRole').value = user ? user.role : 'user';
+  document.getElementById('userModal').classList.add('show');
+}
+
+function openVehicleModal(vehicle) {
+  document.getElementById('vehicleModalTitle').textContent = vehicle ? '編輯車輛' : '新增車輛';
+  document.getElementById('vehicleRowIndex').value = vehicle ? vehicle.rowIndex : '';
+  document.getElementById('mVehiclePlate').value = vehicle ? vehicle.plateNo : '';
+  document.getElementById('mVehicleBrand').value = vehicle ? vehicle.brand : '';
+  document.getElementById('mVehicleModel').value = vehicle ? vehicle.model : '';
+  document.getElementById('mVehicleLocation').value = vehicle ? vehicle.location : '';
+  document.getElementById('vehicleModal').classList.add('show');
+}
+
+async function saveUser() {
+  const user = {
+    rowIndex: document.getElementById('userRowIndex').value || null,
+    employeeId: document.getElementById('mUserId').value.trim(),
+    nameCn: document.getElementById('mUserNameCn').value.trim(),
+    nameEn: document.getElementById('mUserNameEn').value.trim(),
+    email: document.getElementById('mUserEmail').value.trim(),
+    role: document.getElementById('mUserRole').value
+  };
+  if (!user.employeeId || !user.nameCn) { alert('員工代號及中文姓名為必填'); return; }
+  const res = await api('adminSaveUser', { user });
+  if (res.success) { closeModal('userModal'); loadAdminData(); }
+  else alert(res.message);
+}
+
+async function saveVehicle() {
+  const vehicle = {
+    rowIndex: document.getElementById('vehicleRowIndex').value || null,
+    plateNo: document.getElementById('mVehiclePlate').value.trim(),
+    brand: document.getElementById('mVehicleBrand').value.trim(),
+    model: document.getElementById('mVehicleModel').value.trim(),
+    location: document.getElementById('mVehicleLocation').value.trim()
+  };
+  if (!vehicle.plateNo) { alert('車號為必填'); return; }
+  const res = await api('adminSaveVehicle', { vehicle });
+  if (res.success) { closeModal('vehicleModal'); loadAdminData(); }
+  else alert(res.message);
+}
+
+async function deleteUser(rowIndex, name) {
+  if (!confirm('確定要刪除 ' + name + ' 嗎？')) return;
+  const res = await api('adminDeleteUser', { rowIndex });
+  if (res.success) loadAdminData();
+}
+
+async function deleteVehicle(rowIndex, plate) {
+  if (!confirm('確定要刪除車輛 ' + plate + ' 嗎？')) return;
+  const res = await api('adminDeleteVehicle', { rowIndex });
+  if (res.success) loadAdminData();
+}
+
+async function adminResetAll() {
+  if (!confirm('確定要重設所有人員密碼為員工代號嗎？\n下次登入將強制更改密碼。')) return;
+  const res = await api('adminResetAllPasswords');
+  if (res.success) alert('已重設所有密碼');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+
+// ============================================================
+// PAGE NAVIGATION
+// ============================================================
+function switchPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.page === pageId);
+  });
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function showAlert(el, msg) { el.textContent = msg; el.classList.add('show'); }
+function hideAlert(el) { el.classList.remove('show'); }
+function scrollToTop() { window.scrollTo({top:0,behavior:'smooth'}); }
+
+// Enter key login
+document.getElementById('loginPwd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+// Resize signature canvas
+window.addEventListener('resize', () => {
+  const canvas = document.getElementById('signatureCanvas');
+  if (canvas) { canvas.width = canvas.offsetWidth; }
+});
+</script>
+</body>
+</html>
