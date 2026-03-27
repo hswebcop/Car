@@ -576,6 +576,31 @@
           <textarea id="otherNote" placeholder="請填寫其他說明..." rows="3"></textarea>
         </div>
       </div>
+
+      <!-- 瑕疵備註 -->
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <label for="defectNote" style="font-size:12px;color:var(--text-dim);font-weight:500;letter-spacing:0.5px">
+            瑕疵備註
+          </label>
+          <span id="defectNoteRequired" style="display:none;font-size:11px;color:var(--danger);font-weight:600">
+            ★ 必填（有項目未勾選）
+          </span>
+          <span id="defectNoteOptional" style="font-size:11px;color:var(--text-muted)">
+            選填
+          </span>
+        </div>
+        <textarea
+          id="defectNote"
+          class="defect-textarea"
+          placeholder="如有取消勾選的項目，請在此說明瑕疵狀況..."
+          rows="3"
+          style="width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);font-size:15px;font-family:inherit;outline:none;resize:vertical;min-height:80px;line-height:1.5;transition:border-color 0.2s,box-shadow 0.2s;"
+        ></textarea>
+        <p id="defectNoteHint" style="font-size:12px;color:var(--text-muted);margin-top:4px;display:none">
+          請說明取消勾選的原因或瑕疵狀況
+        </p>
+      </div>
     </div>
 
     <!-- 佐證圖片 -->
@@ -875,6 +900,23 @@ async function showMainApp() {
   document.getElementById('checkOther').addEventListener('change', function() {
     document.getElementById('otherNoteWrap').style.display = this.checked ? 'block' : 'none';
   });
+
+  // 瑕疵備註：監聽所有預設打勾的 checkbox，有任何一個被取消時備註變必填
+  const watchedCheckboxes = ['checkKey', 'checkLicense', 'checkExterior', 'checkInterior'];
+  watchedCheckboxes.forEach(id => {
+    document.getElementById(id).addEventListener('change', updateDefectNoteState);
+  });
+
+  // 瑕疵備註輸入框 focus 樣式
+  const defectTextarea = document.getElementById('defectNote');
+  defectTextarea.addEventListener('focus', function() {
+    this.style.borderColor = 'var(--accent)';
+    this.style.boxShadow = '0 0 0 3px var(--accent-glow)';
+  });
+  defectTextarea.addEventListener('blur', function() {
+    this.style.boxShadow = '';
+    updateDefectNoteState();
+  });
 }
 
 function fillProfile() {
@@ -1018,6 +1060,37 @@ function clearSignature() {
 }
 
 // ============================================================
+// 瑕疵備註必填狀態控制
+// ============================================================
+function hasUncheckedItem() {
+  return !document.getElementById('checkKey').checked ||
+         !document.getElementById('checkLicense').checked ||
+         !document.getElementById('checkExterior').checked ||
+         !document.getElementById('checkInterior').checked;
+}
+
+function updateDefectNoteState() {
+  const unchecked = hasUncheckedItem();
+  const reqLabel  = document.getElementById('defectNoteRequired');
+  const optLabel  = document.getElementById('defectNoteOptional');
+  const hint      = document.getElementById('defectNoteHint');
+  const textarea  = document.getElementById('defectNote');
+
+  reqLabel.style.display = unchecked ? 'inline' : 'none';
+  optLabel.style.display = unchecked ? 'none' : 'inline';
+  hint.style.display     = unchecked ? 'block' : 'none';
+
+  if (unchecked) {
+    textarea.style.borderColor = textarea.value.trim()
+      ? 'var(--success)' : 'var(--warning)';
+    textarea.placeholder = '必填：請說明取消勾選的原因或瑕疵狀況...';
+  } else {
+    textarea.style.borderColor = 'var(--border)';
+    textarea.placeholder = '如有取消勾選的項目，請在此說明瑕疵狀況...';
+  }
+}
+
+// ============================================================
 // SUBMIT HANDOVER
 // ============================================================
 async function submitHandover() {
@@ -1030,6 +1103,15 @@ async function submitHandover() {
   if (!vehicle) { showAlert(alert, '請選擇借用車輛'); scrollToTop(); return; }
   if (!toId) { showAlert(alert, '請選擇被交接人'); scrollToTop(); return; }
   if (signaturePad && signaturePad.isEmpty()) { showAlert(alert, '請被交接人完成簽名'); scrollToTop(); return; }
+
+  // 瑕疵備註必填驗證
+  const defectNote = document.getElementById('defectNote').value.trim();
+  if (hasUncheckedItem() && !defectNote) {
+    showAlert(alert, '有點交項目未勾選，請在「瑕疵備註」說明原因');
+    document.getElementById('defectNote').style.borderColor = 'var(--danger)';
+    document.getElementById('defectNote').focus();
+    return;
+  }
 
   const toUser = allUsers.find(u => u.employeeId === toId);
   const veh = allVehicles.find(v => v.plateNo === vehicle);
@@ -1060,6 +1142,7 @@ async function submitHandover() {
     checkExterior: document.getElementById('checkExterior').checked,
     checkInterior: document.getElementById('checkInterior').checked,
     otherNote: document.getElementById('checkOther').checked ? document.getElementById('otherNote').value : '',
+    defectNote: document.getElementById('defectNote').value.trim(),
     photos,
     signature
   };
@@ -1097,6 +1180,11 @@ function resetHandover() {
   document.getElementById('checkOther').checked = false;
   document.getElementById('otherNoteWrap').style.display = 'none';
   document.getElementById('otherNote').value = '';
+  document.getElementById('defectNote').value = '';
+  document.getElementById('defectNote').style.borderColor = 'var(--border)';
+  document.getElementById('defectNoteRequired').style.display = 'none';
+  document.getElementById('defectNoteOptional').style.display = 'inline';
+  document.getElementById('defectNoteHint').style.display = 'none';
   document.getElementById('photoPreview').innerHTML = '';
   photoFiles = [];
   clearSignature();
