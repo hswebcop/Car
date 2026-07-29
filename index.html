@@ -576,13 +576,28 @@
           <textarea id="otherNote" placeholder="請填寫其他說明..." rows="3"></textarea>
         </div>
       </div>
+
+      <!-- 瑕疵備註 -->
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <label for="defectNote" style="font-size:12px;color:var(--text-dim);font-weight:500;letter-spacing:0.5px">瑕疵備註</label>
+          <span id="defectNoteRequired" style="display:none;font-size:11px;color:var(--danger);font-weight:600">★ 必填（有項目未勾選）</span>
+          <span id="defectNoteOptional" style="font-size:11px;color:var(--text-muted)">選填</span>
+        </div>
+        <textarea id="defectNote"
+          placeholder="如有取消勾選的項目，請在此說明瑕疵狀況..."
+          rows="3"
+          style="width:100%;background:var(--input-bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;color:var(--text);font-size:15px;font-family:inherit;outline:none;resize:vertical;min-height:80px;line-height:1.5;transition:border-color 0.2s,box-shadow 0.2s;"
+        ></textarea>
+        <p id="defectNoteHint" style="font-size:12px;color:var(--text-muted);margin-top:4px;display:none">請說明取消勾選的原因或瑕疵狀況</p>
+      </div>
     </div>
 
     <!-- 佐證圖片 -->
     <div class="card">
       <div class="card-title">佐證圖片</div>
       <div class="photo-area" id="photoArea">
-        <input type="file" id="photoInput" accept="image/*" multiple capture="environment" onchange="onPhotoSelected(event)">
+        <input type="file" id="photoInput" accept="image/*" multiple onchange="onPhotoSelected(event)">
         <div class="photo-area-icon">📷</div>
         <div class="photo-area-text">點擊拍照或選擇圖片<br><small style="color:var(--text-muted)">可多張上傳</small></div>
       </div>
@@ -774,39 +789,41 @@ async function api(action, data = {}) {
 // AUTH
 // ============================================================
 // ============================================================
-// SSO：頁面載入時檢查 URL 是否帶有 ssoToken 參數
+// SSO：頁面載入時檢查 URL 是否帶有 ?sso= 參數（Intranet 跳轉）
 // ============================================================
 async function checkSsoToken() {
-  const params = new URLSearchParams(window.location.search);
-  // 支援 ?sso= 參數（與 Intranet getSsoToken 一致）
+  const params   = new URLSearchParams(window.location.search);
   const ssoToken = params.get('sso');
   if (!ssoToken) return false;
 
-  // 清除 URL 上的 token 參數（避免重新整理重複使用）
-  const cleanUrl = window.location.pathname;
-  window.history.replaceState({}, document.title, cleanUrl);
+  // 立即清除 URL 參數，避免重新整理重複使用
+  window.history.replaceState({}, document.title, window.location.pathname);
 
-  // 顯示 SSO 驗證中的提示
-  const loginCard = document.querySelector('.login-card');
-  if (loginCard) {
-    loginCard.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim)">' +
-      '<div class="spinner" style="width:32px;height:32px;margin:0 auto 16px"></div>' +
-      '<p>Intranet 身份驗證中...</p></div>';
+  // 顯示驗證中畫面
+  const loginWrap = document.getElementById('loginPage');
+  if (loginWrap) {
+    loginWrap.innerHTML =
+      '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+      'min-height:100vh;gap:16px;color:var(--text-dim)">' +
+      '<div class="spinner" style="width:36px;height:36px;border-width:3px"></div>' +
+      '<p style="font-size:14px;margin:0">Intranet 身份驗證中...</p></div>';
   }
 
   try {
     const res = await api('ssoLogin', { ssoToken });
     if (res.success) {
-      authToken = res.token;
+      authToken   = res.token;
       currentUser = res.user;
       await showMainApp();
       return true;
     } else {
-      // SSO 失敗，還原登入頁並顯示錯誤
+      // SSO 失敗：重新載入回登入頁
+      console.error('SSO 失敗:', res.message);
       location.reload();
       return false;
     }
   } catch(e) {
+    console.error('SSO 連線失敗:', e);
     location.reload();
     return false;
   }
@@ -913,6 +930,11 @@ async function showMainApp() {
   // Checkbox other toggle
   document.getElementById('checkOther').addEventListener('change', function() {
     document.getElementById('otherNoteWrap').style.display = this.checked ? 'block' : 'none';
+  });
+
+  // 瑕疵備註：任一預設勾選項目取消時變必填
+  ['checkKey','checkLicense','checkExterior','checkInterior'].forEach(id => {
+    document.getElementById(id).addEventListener('change', updateDefectNoteState);
   });
 }
 
@@ -1057,6 +1079,31 @@ function clearSignature() {
 }
 
 // ============================================================
+// 瑕疵備註必填狀態控制
+// ============================================================
+function hasUncheckedItem() {
+  return !document.getElementById('checkKey').checked ||
+         !document.getElementById('checkLicense').checked ||
+         !document.getElementById('checkExterior').checked ||
+         !document.getElementById('checkInterior').checked;
+}
+
+function updateDefectNoteState() {
+  const unchecked = hasUncheckedItem();
+  document.getElementById('defectNoteRequired').style.display = unchecked ? 'inline' : 'none';
+  document.getElementById('defectNoteOptional').style.display = unchecked ? 'none'   : 'inline';
+  document.getElementById('defectNoteHint').style.display     = unchecked ? 'block'  : 'none';
+  const ta = document.getElementById('defectNote');
+  if (unchecked) {
+    ta.style.borderColor = ta.value.trim() ? 'var(--success)' : 'var(--warning)';
+    ta.placeholder = '必填：請說明取消勾選的原因或瑕疵狀況...';
+  } else {
+    ta.style.borderColor = 'var(--border)';
+    ta.placeholder = '如有取消勾選的項目，請在此說明瑕疵狀況...';
+  }
+}
+
+// ============================================================
 // SUBMIT HANDOVER
 // ============================================================
 async function submitHandover() {
@@ -1069,6 +1116,15 @@ async function submitHandover() {
   if (!vehicle) { showAlert(alert, '請選擇借用車輛'); scrollToTop(); return; }
   if (!toId) { showAlert(alert, '請選擇被交接人'); scrollToTop(); return; }
   if (signaturePad && signaturePad.isEmpty()) { showAlert(alert, '請被交接人完成簽名'); scrollToTop(); return; }
+
+  // 瑕疵備註必填驗證
+  const defectNoteVal = document.getElementById('defectNote').value.trim();
+  if (hasUncheckedItem() && !defectNoteVal) {
+    showAlert(alert, '有點交項目未勾選，請在「瑕疵備註」說明原因');
+    document.getElementById('defectNote').style.borderColor = 'var(--danger)';
+    document.getElementById('defectNote').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   const toUser = allUsers.find(u => u.employeeId === toId);
   const veh = allVehicles.find(v => v.plateNo === vehicle);
@@ -1098,7 +1154,8 @@ async function submitHandover() {
     checkLicense: document.getElementById('checkLicense').checked,
     checkExterior: document.getElementById('checkExterior').checked,
     checkInterior: document.getElementById('checkInterior').checked,
-    otherNote: document.getElementById('checkOther').checked ? document.getElementById('otherNote').value : '',
+    otherNote:   document.getElementById('checkOther').checked ? document.getElementById('otherNote').value : '',
+    defectNote:  document.getElementById('defectNote').value.trim(),
     photos,
     signature
   };
@@ -1136,6 +1193,11 @@ function resetHandover() {
   document.getElementById('checkOther').checked = false;
   document.getElementById('otherNoteWrap').style.display = 'none';
   document.getElementById('otherNote').value = '';
+  document.getElementById('defectNote').value = '';
+  document.getElementById('defectNote').style.borderColor = 'var(--border)';
+  document.getElementById('defectNoteRequired').style.display = 'none';
+  document.getElementById('defectNoteOptional').style.display = 'inline';
+  document.getElementById('defectNoteHint').style.display = 'none';
   document.getElementById('photoPreview').innerHTML = '';
   photoFiles = [];
   clearSignature();
@@ -1350,10 +1412,8 @@ window.addEventListener('resize', () => {
   if (canvas) { canvas.width = canvas.offsetWidth; }
 });
 
-// 頁面載入時自動檢查 SSO token
-window.addEventListener('load', () => {
-  checkSsoToken();
-});
+// 頁面載入時自動偵測 SSO Token
+window.addEventListener('load', () => { checkSsoToken(); });
 </script>
 </body>
 </html>
